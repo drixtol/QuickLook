@@ -40,7 +40,7 @@ Shell32::FocusedWindowType Shell32::GetFocusedWindowType()
 	{
 		return DOPUS;
 	}
- 	if (Everything::MatchClass(classBuffer))
+	if (wcscmp(classBuffer, L"EVERYTHING") == 0 || wcscmp(classBuffer, L"EVERYTHING_SHELL_EXECUTE") == 0)
 	{
 		return EVERYTHING;
 	}
