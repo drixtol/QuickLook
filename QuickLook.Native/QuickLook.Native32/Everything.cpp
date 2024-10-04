@@ -1,4 +1,4 @@
-// Copyright © 2017 Paddy Xu
+﻿// Copyright © 2017 Paddy Xu
 // 
 // This file is part of QuickLook program.
 // 
@@ -18,60 +18,36 @@
 #include "stdafx.h"
 #include "Everything.h"
 
+#define EVERYTHING_IPC_SEARCH_CLIENT_WNDCLASSW							L"EVERYTHING"
+#define EVERYTHING_IPC_ID_FILE_COPY_FULL_PATH_AND_NAME					41007
+
 void Everything::GetSelected(PWCHAR buffer)
 {
-	auto hWinFG = GetForegroundWindow();
-	
-	// Everything v1.5 IPC via hidden window.
-	HWND hWinI = FindWindowExW(hWinFG, NULL, EVERYTHING_IPC_HIDDEN_WIN_CLASS, NULL);
-	
-	if (hWinI != nullptr) {
-		int pLength = GetWindowTextLength(hWinI);
-		wchar_t* pText = new wchar_t[pLength + 1];
-		GetWindowText(hWinI, pText, pLength + 1);
-		wcsncpy_s(buffer, MAX_PATH_EX, pText, pLength);
-		return; // Success. Clipboard access unnecessary.
-	}
+	if (SendMessage(
+		FindWindow(EVERYTHING_IPC_SEARCH_CLIENT_WNDCLASSW, nullptr),
+		WM_COMMAND,
+		MAKEWPARAM(EVERYTHING_IPC_ID_FILE_COPY_FULL_PATH_AND_NAME, 0),
+		0))
+		return;
 
-	HWND hWin = FindWindowW(EVERYTHING_IPC_WINDOW_CLASS, NULL);
+	if (!OpenClipboard(nullptr))
+		return;
 
-	if (hWin != nullptr) {
-		// Everything IPC Clipboard
-		SendMessageW(
-			hWin,
-			WM_COMMAND,
-			MAKEWPARAM(EVERYTHING_IPC_COPY_TO_CLIPBOARD, 0),
-			0);
+	auto hData = GetClipboardData(CF_UNICODETEXT);
+	if (hData == nullptr)
+		return;
 
-		Sleep(100);
-		
-		if (!OpenClipboard(nullptr))
-			return;
-		
-		auto hData = GetClipboardData(CF_UNICODETEXT);
-		if (hData == nullptr)
-			return;
+	auto pText = static_cast<PWCHAR>(GlobalLock(hData));
+	if (pText == nullptr)
+		return;
 
-		auto pText = static_cast<PWCHAR>(GlobalLock(hData));
-		if (pText == nullptr)
-			return;
+	auto p = wcsstr(pText, L"\r\n");
+	auto l = p == nullptr ? wcslen(pText) : p - pText;
+	wcsncpy_s(buffer, MAX_PATH_EX, pText, l); // Everything supports Long Path
 
-		auto p = wcsstr(pText, L"\r\n");
-		auto l = p == nullptr ? wcslen(pText) : p - pText;
-		wcsncpy_s(buffer, MAX_PATH_EX, pText, l); // Everything supports Long Path
-		
-		GlobalUnlock(hData);
-		CloseClipboard();
-	}
-}
+	GlobalUnlock(hData);
 
-bool Everything::MatchClass(PWCHAR classBuffer)
-{
-	WCHAR sMatchC[256] = { '\0' };
-	WCHAR sMatchS[256] = EVERYTHING_IPC_WINDOW_CLASS;
-	int iLen = wcslen(sMatchS);
-	wcsncpy_s(sMatchC, classBuffer, iLen);
-	return (0 == wcscmp(sMatchC, sMatchS));
+	CloseClipboard();
 }
 
 void Everything::backupClipboard()

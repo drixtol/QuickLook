@@ -103,12 +103,7 @@ namespace QuickLook.NativeMethods
             thread.SetApartmentState(ApartmentState.STA);
             thread.Start();
             thread.Join();
-            if(sb.Length > 2 && sb[0].Equals('"') && sb[sb.Length-1].Equals('"'))
-            {
-                // We got a quoted string which breaks ResolveShortcut
-                sb = sb.Replace("\"", "", 0, 1).Replace("\"", "", sb.Length-1, 1);
-            }
-            return ResolveShortcut(sb?.ToString() ?? String.Empty);
+            return ResolveShortcut(sb?.ToString() ?? string.Empty);
         }
 
         private static string ResolveShortcut(string path)
